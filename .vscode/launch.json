@@ -1,0 +1,91 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API: PulseOne.WebApi",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build: Backend Solution",
+      "program": "${workspaceFolder}/src/backend/PulseOne.WebApi/bin/Debug/net10.0/PulseOne.WebApi.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/backend/PulseOne.WebApi",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7001;http://localhost:5001"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/Views"
+      }
+    },
+    {
+      "name": "Worker: PulseOne.BackgroundWorker",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build: Backend Solution",
+      "program": "${workspaceFolder}/src/backend/PulseOne.BackgroundWorker/bin/Debug/net10.0/PulseOne.BackgroundWorker.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/backend/PulseOne.BackgroundWorker",
+      "stopAtEntry": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "HANGFIRE_WORKERS": "2"
+      }
+    },
+    {
+      "name": "Migration: PulseOne.MigrationRunner",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build: Backend Solution",
+      "program": "${workspaceFolder}/src/backend/PulseOne.MigrationRunner/bin/Debug/net10.0/PulseOne.MigrationRunner.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/backend/PulseOne.MigrationRunner",
+      "stopAtEntry": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Angular: Tenant Portal (ng serve)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/client-app/node_modules/.bin/ng",
+      "args": ["serve", "--port", "4200", "--proxy-config", "proxy.conf.json"],
+      "cwd": "${workspaceFolder}/src/client-app",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Angular: Host Portal (ng serve)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/host-admin-app/node_modules/.bin/ng",
+      "args": ["serve", "--port", "4300", "--proxy-config", "proxy.conf.json"],
+      "cwd": "${workspaceFolder}/src/host-admin-app",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Playwright: Debug E2E",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/e2e-tests/node_modules/.bin/playwright",
+      "args": ["test", "--debug"],
+      "cwd": "${workspaceFolder}/e2e-tests",
+      "console": "integratedTerminal",
+      "env": {
+        "PWDEBUG": "1"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (API + Tenant Portal)",
+      "configurations": ["API: PulseOne.WebApi", "Angular: Tenant Portal (ng serve)"],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (API + Host Portal)",
+      "configurations": ["API: PulseOne.WebApi", "Angular: Host Portal (ng serve)"],
+      "stopAll": true
+    }
+  ]
+}

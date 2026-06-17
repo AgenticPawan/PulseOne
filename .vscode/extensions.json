@@ -1,0 +1,26 @@
+{
+  "recommendations": [
+    "anthropic.claude-code",
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "angular.ng-template",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-azuretools.vscode-bicep",
+    "ms-azuretools.vscode-azurefunctions",
+    "ms-azuretools.vscode-docker",
+    "humao.rest-client",
+    "ms-playwright.playwright",
+    "ryanluker.vscode-coverage-gutters",
+    "ms-mssql.mssql",
+    "redhat.vscode-yaml",
+    "eamodio.gitlens",
+    "streetsidesoftware.code-spell-checker",
+    "zxh404.vscode-proto3"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript-next"
+  ]
+}

@@ -1,0 +1,28 @@
+root = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+charset = utf-8-bom
+insert_final_newline = true
+
+# --- Analyzer policy ---------------------------------------------------------
+# We keep TreatWarningsAsErrors=true (Directory.Build.props) so correctness and
+# security analyzers fail the build. A few high-noise PERFORMANCE/STYLE rules are
+# downgraded to suggestions — they are not appropriate as hard errors for one-shot
+# jobs, hosting bootstrap, and Phase 0 scaffolds.
+
+# CA1848: prefer LoggerMessage delegates. Micro-optimization; not warranted for the
+# MigrationRunner (a one-shot job) or low-frequency startup logging.
+dotnet_diagnostic.CA1848.severity = suggestion
+
+# CA1873: "expensive" log argument. Arguments used here are cheap property reads on a
+# one-shot job; the analyzer flags them conservatively.
+dotnet_diagnostic.CA1873.severity = suggestion
+
+# CA1031: catch-all is intentional in the migration orchestrator (must continue past
+# a single failing shard and report a non-zero exit code).
+dotnet_diagnostic.CA1031.severity = suggestion
+
+# CA2007: ConfigureAwait(false) — not needed in apps without a sync context (console/host).
+dotnet_diagnostic.CA2007.severity = none

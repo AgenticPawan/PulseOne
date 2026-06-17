@@ -1,0 +1,47 @@
+name: worker-consumer-deploy
+
+# Deploys the Hangfire background worker (PulseOne.BackgroundWorker) to Azure Container Apps.
+# The worker scales on the KEDA MSSQL trigger (Phase 3). Like the API, it deploys only after
+# the MigrationRunner job has completed successfully.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+      - '.github/workflows/worker-consumer-deploy.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-pulseone-prod
+  WORKER_APP: pulseone-backgroundworker
+
+jobs:
+  build:
+    name: Build & push worker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build solution
+        working-directory: src/backend
+        run: dotnet build PulseOne.sln --configuration Release
+      # TODO(Phase 8): docker build/push of PulseOne.BackgroundWorker to ACR via OIDC.
+
+  deploy:
+    name: Deploy worker revision
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy
+        run: echo "TODO(Phase 8): az containerapp update --name $WORKER_APP (KEDA MSSQL scaler)."

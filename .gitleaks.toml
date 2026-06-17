@@ -1,0 +1,31 @@
+# gitleaks configuration for PulseOne.
+# Secrets must never live in source — Key Vault only (CLAUDE.md security rule #1).
+title = "PulseOne gitleaks config"
+
+[extend]
+# Start from the maintained default rule set, then add project-specific rules.
+useDefault = true
+
+[[rules]]
+id = "razorpay-key"
+description = "Razorpay API key id"
+regex = '''rzp_(live|test)_[0-9A-Za-z]{14,}'''
+tags = ["razorpay", "key"]
+
+[[rules]]
+id = "azure-sql-conn"
+description = "Azure SQL connection string with inline password"
+regex = '''(?i)(Server|Data Source)=.+;(.*;)?Password=[^;<>\s]+'''
+tags = ["azure", "sql", "connection-string"]
+
+[allowlist]
+description = "Placeholders are allowed — they are not real secrets."
+regexes = [
+  '''<KEY_VAULT_REFERENCE[^>]*>''',
+  '''Trusted_Connection=True''',          # localdb design-time / seed placeholders
+  '''(localdb)\\mssqllocaldb''',
+]
+paths = [
+  '''(.*?)\.md$''',                        # documentation snippets
+  '''\.gitleaks\.toml$''',                 # this file's own example patterns
+]

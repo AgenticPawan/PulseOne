@@ -1,0 +1,55 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+      },
+      "description": "GitHub MCP server — used by deployment-agent to create PRs, check CI status, manage branch protection rules",
+      "usedBy": ["phase-8-deployment.md"],
+      "capabilities": ["create_pr", "list_issues", "get_workflow_runs", "create_branch"]
+    },
+
+    "azure-sql": {
+      "command": "npx",
+      "args": ["-y", "@azure/mcp"],
+      "env": {
+        "AZURE_SUBSCRIPTION_ID": "${AZURE_SUBSCRIPTION_ID}",
+        "AZURE_TENANT_ID": "${AZURE_TENANT_ID}",
+        "AZURE_CLIENT_ID": "${AZURE_CLIENT_ID}"
+      },
+      "description": "Azure MCP server — used by foundation-agent to inspect SQL resources, monitor migration runner job status",
+      "usedBy": ["phase-0-foundation.md", "phase-8-deployment.md"],
+      "capabilities": ["list_resources", "query_sql", "get_job_status"],
+      "notes": "Uses Managed Identity / OIDC — no client secret required"
+    },
+
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "e:/GITHUB/PulseOne"
+      ],
+      "description": "Local filesystem access — scoped to the PulseOne repo root only",
+      "usedBy": ["all agents"],
+      "capabilities": ["read_file", "write_file", "list_directory", "search_files"]
+    },
+
+    "microsoft-learn": {
+      "command": "npx",
+      "args": ["-y", "@microsoft-learn/mcp-server"],
+      "description": "Microsoft Learn documentation — used by all agents to look up current Azure SDK, EF Core 10, and .NET 10 API references",
+      "usedBy": ["all agents"],
+      "capabilities": ["search_docs", "fetch_doc", "search_code_samples"]
+    }
+  },
+
+  "notes": {
+    "secrets": "All MCP server credentials are passed via environment variables. NEVER hardcode tokens in this file.",
+    "scope": "The filesystem server is scoped to e:/GITHUB/PulseOne — it cannot access files outside the project.",
+    "azure-auth": "Azure MCP server uses OIDC federated identity (AZURE_CLIENT_ID with no AZURE_CLIENT_SECRET). Configure in Azure AD app registration.",
+    "github-pat": "GITHUB_PAT requires: repo, workflow, read:org scopes for the deployment agent's PR and CI operations."
+  }
+}

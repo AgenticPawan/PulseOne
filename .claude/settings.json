@@ -1,0 +1,65 @@
+{
+  "model": "claude-opus-4-8",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-generate.sh",
+            "description": "Validate design docs and scan for secrets before writing new code"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-generate.sh",
+            "description": "Run lint and build verification after code generation"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "DOTNET_ENVIRONMENT": "Development",
+    "PULSEONE_PROJECT_ROOT": "e:/GITHUB/PulseOne",
+    "NODE_ENV": "development"
+  },
+  "includeFiles": [
+    "CLAUDE.md",
+    ".claude/instructions/global-context.md"
+  ],
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "e:/GITHUB/PulseOne"
+      ]
+    },
+    "microsoft-learn": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@microsoft-learn/mcp-server"
+      ]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(dotnet:*)",
+      "Bash(ng:*)",
+      "Bash(npx:*)",
+      "Bash(gitleaks:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

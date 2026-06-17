@@ -1,0 +1,15 @@
+{
+  "name": "pulseone-e2e-tests",
+  "version": "0.0.0",
+  "description": "PulseOne Playwright end-to-end tests.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@axe-core/playwright": "^4.10.0"
+  }
+}

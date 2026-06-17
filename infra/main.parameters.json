@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "westindia"
+    },
+    "secondaryLocation": {
+      "value": "eastasia"
+    },
+    "developerIp": {
+      "value": ""
+    },
+    "domainPrefix": {
+      "value": "pulseone"
+    },
+    "sqlAdminObjectId": {
+      "value": "<KEY_VAULT_REFERENCE: AAD object id of pulseone-sql-admins group — supplied by pipeline>"
+    }
+  }
+}

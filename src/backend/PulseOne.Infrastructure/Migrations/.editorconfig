@@ -1,0 +1,8 @@
+# EF Core generates migration files; they are machine-authored and must not be held to
+# the same analyzer bar as hand-written code. Treat this folder as generated.
+[*.cs]
+generated_code = true
+
+# Belt-and-suspenders: silence the specific rules EF migration output trips.
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1062.severity = none

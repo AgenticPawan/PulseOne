@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PulseOne.CoreDomain\PulseOne.CoreDomain.csproj" />
+  </ItemGroup>
+
+</Project>

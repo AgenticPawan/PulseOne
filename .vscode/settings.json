@@ -1,0 +1,58 @@
+{
+  "claude.configPath": ".claude",
+  "editor.formatOnSave": true,
+  "editor.rulers": [
+    120
+  ],
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.angular": true,
+    "**/TestResults": true,
+    "**/.claude/error-logs": true,
+    "**/.claude/skills/cache": true
+  },
+  "files.watcherExclude": {
+    "**/bin/**": true,
+    "**/obj/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.angular/**": true
+  },
+  "dotnet.defaultSolution": "src/backend/PulseOne.sln",
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  "csharp.format.enable": true,
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "typescript.tsdk": "src/client-app/node_modules/typescript/lib",
+  "eslint.workingDirectories": [
+    "src/client-app",
+    "src/host-admin-app"
+  ],
+  "terminal.integrated.env.windows": {
+    "DOTNET_ENVIRONMENT": "Development"
+  },
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.angular": true,
+    "**/Migrations": false
+  },
+  "claudeCode.projectInstructionsFile": "CLAUDE.md",
+  "claudeCode.configDirectory": ".claude"
+}

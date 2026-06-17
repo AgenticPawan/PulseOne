@@ -1,0 +1,48 @@
+# ---------- .NET ----------
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+project.lock.json
+
+# ---------- Node / Angular ----------
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+coverage/
+
+# ---------- Playwright ----------
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# ---------- Azure / IaC ----------
+*.azureauth
+.azure/
+*.tfstate
+*.tfstate.*
+
+# ---------- Secrets (defense-in-depth; secrets must never be committed) ----------
+*.env
+.env.*
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.pem
+*.key
+
+# ---------- Editor / OS ----------
+.DS_Store
+Thumbs.db
+*.swp
+.idea/

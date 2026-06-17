@@ -1,0 +1,201 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Phase 0: Implement Foundation",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 0"],
+      "group": "build",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 1: Implement Auth",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 1"],
+      "group": "build",
+      "dependsOn": "Phase 0: Implement Foundation",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 2: Implement Core Backend",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 2"],
+      "group": "build",
+      "dependsOn": "Phase 1: Implement Auth",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 3: Implement Background Jobs",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 3"],
+      "group": "build",
+      "dependsOn": "Phase 2: Implement Core Backend",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 4: Implement Payment",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 4"],
+      "group": "build",
+      "dependsOn": "Phase 3: Implement Background Jobs",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 5: Implement Host Portal",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 5"],
+      "group": "build",
+      "dependsOn": "Phase 4: Implement Payment",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 6: Implement Tenant Portal",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 6"],
+      "group": "build",
+      "dependsOn": "Phase 5: Implement Host Portal",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 7: Implement Tests",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 7"],
+      "group": "test",
+      "dependsOn": "Phase 6: Implement Tenant Portal",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Phase 8: Implement Deployment",
+      "type": "shell",
+      "command": "claude",
+      "args": ["implement phase 8"],
+      "group": "build",
+      "dependsOn": "Phase 7: Implement Tests",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: Backend Solution",
+      "type": "shell",
+      "command": "dotnet build src/backend/PulseOne.sln --configuration Release",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Test: All",
+      "type": "shell",
+      "command": "dotnet test src/backend/ --logger trx --results-directory TestResults/",
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Isolation (Critical)",
+      "type": "shell",
+      "command": "dotnet test src/backend/PulseOne.Infrastructure.Tests --filter Category=Isolation --logger trx",
+      "group": "test",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Webhook Suite",
+      "type": "shell",
+      "command": "dotnet test src/backend/PulseOne.Application.Tests --filter Category=Webhook --logger trx",
+      "group": "test",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: E2E Playwright",
+      "type": "shell",
+      "command": "npx playwright test",
+      "options": { "cwd": "${workspaceFolder}/e2e-tests" },
+      "group": "test",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Accessibility (axe-core)",
+      "type": "shell",
+      "command": "npx playwright test specs/accessibility.spec.ts --reporter=list",
+      "options": { "cwd": "${workspaceFolder}/e2e-tests" },
+      "group": "test",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint: All",
+      "type": "shell",
+      "command": "bash .claude/hooks/post-generate.sh all",
+      "group": "build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Migrate: Create (Shard)",
+      "type": "shell",
+      "command": "dotnet ef migrations add ${input:migrationName} --project src/backend/PulseOne.Infrastructure --startup-project src/backend/PulseOne.WebApi --context ApplicationDbContext --output-dir Migrations/Shard",
+      "group": "build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Migrate: Run (Dev)",
+      "type": "shell",
+      "command": "dotnet run --project src/backend/PulseOne.MigrationRunner --environment Development",
+      "group": "build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Secret Scan (gitleaks)",
+      "type": "shell",
+      "command": "bash .claude/hooks/pre-generate.sh",
+      "group": "build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Angular: Build Tenant Portal",
+      "type": "shell",
+      "command": "ng build --configuration=production",
+      "options": { "cwd": "${workspaceFolder}/src/client-app" },
+      "group": "build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Angular: Build Host Portal",
+      "type": "shell",
+      "command": "ng build --configuration=production",
+      "options": { "cwd": "${workspaceFolder}/src/host-admin-app" },
+      "group": "build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": ["$tsc"]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "migrationName",
+      "type": "promptString",
+      "description": "Migration name (PascalCase, e.g. AddReportStatusIndex)"
+    }
+  ]
+}
