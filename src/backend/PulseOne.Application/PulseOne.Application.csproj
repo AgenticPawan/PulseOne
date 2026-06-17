@@ -4,4 +4,9 @@
     <ProjectReference Include="..\PulseOne.CoreDomain\PulseOne.CoreDomain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- PBAC requirement + handler implement ASP.NET Core's IAuthorizationRequirement. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" />
+  </ItemGroup>
+
 </Project>
