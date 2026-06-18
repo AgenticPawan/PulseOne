@@ -46,9 +46,26 @@
     <!-- OpenTelemetry (versions aligned with Azure.Monitor.OpenTelemetry.AspNetCore 1.3.0 transitive mins) -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.15.2" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.3.0" />
     <!-- Forward-pin transitive OpenTelemetry.Api past GHSA-g94r-2vxg-569j (NU1902). -->
     <PackageVersion Include="OpenTelemetry.Api" Version="1.15.3" />
+
+    <!-- Phase 3: Hangfire job backplane on an isolated Azure SQL DB (blueprint §6). -->
+    <PackageVersion Include="Hangfire.Core" Version="1.8.23" />
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageVersion Include="Hangfire.SqlServer" Version="1.8.23" />
+    <!-- Forward-pin Hangfire's transitive Newtonsoft.Json (11.0.1) past GHSA-5crp-9r3c-p9vr (NU1903).
+         Hangfire serializes job args with Newtonsoft; 13.0.3 is the patched, API-compatible line. -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+
+    <!-- Phase 3: report generation (chunked Excel via Open XML streaming, PDF via QuestPDF)
+         + tenant-scoped blob output. DocumentFormat.OpenXml is MIT and supports OpenXmlWriter
+         true row-by-row streaming, satisfying the ">100k rows must stream" constraint without
+         the EPPlus commercial-license friction. -->
+    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageVersion Include="QuestPDF" Version="2026.6.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.0" />
   </ItemGroup>
 
 </Project>

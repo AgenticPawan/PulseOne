@@ -11,8 +11,29 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Azure.Identity" />
+    <!-- Aliased: DefaultAzureCredential is type-forwarded into both Azure.Identity and
+         Azure.Core (dragged in by the Azure Monitor exporter). The extern alias disambiguates. -->
+    <PackageReference Include="Azure.Identity" Aliases="AzureIdentity" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+
+    <!-- Phase 3: consumer runs the Hangfire server (N workers) on the isolated SQL backplane. -->
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.SqlServer" />
+    <!-- Forward-pin Hangfire's transitive Newtonsoft.Json past GHSA-5crp-9r3c-p9vr (NU1903). -->
+    <PackageReference Include="Newtonsoft.Json" />
+
+    <!-- Phase 3: report generation + tenant-scoped blob output. -->
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="QuestPDF" />
+    <PackageReference Include="Azure.Storage.Blobs" />
+
+    <!-- Observability: the consumer exports its own traces/metrics so producer→queue→consumer
+         correlates in Azure Monitor (blueprint §6.4). -->
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" />
+    <PackageReference Include="OpenTelemetry.Api" />
   </ItemGroup>
 
 </Project>

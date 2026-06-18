@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PulseOne.SharedKernel.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PulseOne.Auth.Tests", "PulseOne.Auth.Tests\PulseOne.Auth.Tests.csproj", "{1784E8DC-B0AF-4CCE-8495-EB31CCF3F1F2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PulseOne.BackgroundWorker.Tests", "PulseOne.BackgroundWorker.Tests\PulseOne.BackgroundWorker.Tests.csproj", "{9419B5A6-0F70-475D-86CF-4341730D58AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{1784E8DC-B0AF-4CCE-8495-EB31CCF3F1F2}.Release|x64.Build.0 = Release|Any CPU
 		{1784E8DC-B0AF-4CCE-8495-EB31CCF3F1F2}.Release|x86.ActiveCfg = Release|Any CPU
 		{1784E8DC-B0AF-4CCE-8495-EB31CCF3F1F2}.Release|x86.Build.0 = Release|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Debug|x64.Build.0 = Debug|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Debug|x86.Build.0 = Debug|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Release|x64.ActiveCfg = Release|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Release|x64.Build.0 = Release|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Release|x86.ActiveCfg = Release|Any CPU
+		{9419B5A6-0F70-475D-86CF-4341730D58AA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

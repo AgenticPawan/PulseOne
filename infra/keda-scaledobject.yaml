@@ -1,0 +1,31 @@
+# KEDA ScaledObject for the PulseOne background-job consumer (blueprint §6, 01-hangfire-setup.md).
+#
+# The consumer (PulseOne.BackgroundWorker) runs on Azure Container Apps and scales on Hangfire
+# queue depth via the KEDA MSSQL scaler. Scale-to-zero: when no jobs are enqueued the consumer
+# costs nothing; bursts fan out up to maxReplicaCount. The producer API never scales on this signal
+# (it runs 0 Hangfire workers and only enqueues).
+#
+# SECURITY: the connection string is referenced from an environment variable that is itself a
+# Key Vault secret reference on the Container App — it is NEVER inlined here (CLAUDE.md / gitleaks).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: hangfire-worker-scaler
+  namespace: pulseone
+  labels:
+    app: pulseone-worker
+spec:
+  scaleTargetRef:
+    name: pulseone-worker            # the ACA consumer deployment/container app
+  minReplicaCount: 0                  # scale-to-zero when the queue is empty
+  maxReplicaCount: 20
+  pollingInterval: 15                 # seconds — keep < 60s so the DLQ alert metric is timely
+  cooldownPeriod: 300                 # seconds to wait before scaling back to zero
+  triggers:
+    - type: mssql
+      metadata:
+        # Key Vault-backed: HANGFIRE_CONNECTION_STRING is a secretRef env var on the Container App.
+        connectionStringFromEnv: HANGFIRE_CONNECTION_STRING
+        # Enqueued jobs across all queues drive scaling; targetValue is jobs-per-replica.
+        query: "SELECT COUNT(*) FROM HangFire.Job WHERE StateName = 'Enqueued'"
+        targetValue: "10"             # ~10 queued jobs per replica

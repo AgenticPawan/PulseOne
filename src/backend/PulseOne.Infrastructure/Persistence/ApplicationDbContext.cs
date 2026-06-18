@@ -205,7 +205,10 @@ public sealed class ApplicationDbContext(
             b.Property(r => r.Id).HasMaxLength(64);
             b.Property(r => r.TenantId).HasMaxLength(64).IsRequired();
             b.Property(r => r.ReportName).HasMaxLength(256).IsRequired();
+            b.Property(r => r.ReportType).HasMaxLength(16).IsRequired();
             b.Property(r => r.Status).HasMaxLength(32).IsRequired();
+            b.Property(r => r.OutputUrl).HasMaxLength(2048);
+            b.Property(r => r.ErrorMessage).HasMaxLength(2048);
             b.Property(r => r.CreatedBy).HasMaxLength(128);
             b.Property(r => r.UpdatedBy).HasMaxLength(128);
             b.HasIndex(r => new { r.TenantId, r.Status });

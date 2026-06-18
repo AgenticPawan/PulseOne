@@ -14,6 +14,13 @@
     <!-- Forward-pin transitive CVE package past GHSA-g94r-2vxg-569j (version set centrally). -->
     <PackageReference Include="OpenTelemetry.Api" />
     <PackageReference Include="StackExchange.Redis" />
+
+    <!-- Phase 3: producer enqueues jobs onto the Hangfire backplane (0 server workers). -->
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.SqlServer" />
+    <!-- Forward-pin Hangfire's transitive Newtonsoft.Json past GHSA-5crp-9r3c-p9vr. -->
+    <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 
 </Project>

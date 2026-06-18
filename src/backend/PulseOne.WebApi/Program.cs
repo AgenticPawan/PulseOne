@@ -8,8 +8,11 @@ using PulseOne.Infrastructure.Persistence.Catalog;
 using PulseOne.SharedKernel.Caching;
 using PulseOne.SharedKernel.Middleware;
 using PulseOne.SharedKernel.MultiTenancy;
+using PulseOne.SharedKernel.BackgroundJobs;
 using PulseOne.SharedKernel.Security;
 using PulseOne.WebApi.Auth;
+using PulseOne.WebApi.Hubs;
+using PulseOne.WebApi.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +66,15 @@ builder.Services.AddScoped<ApplicationDbContext>(sp =>
 });
 builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
+// Phase 3: producer-side Hangfire. Enqueues onto the isolated Hangfire backplane with ZERO server
+// workers — heavy compute runs on PulseOne.BackgroundWorker (the KEDA-scaled ACA consumer).
+builder.Services.AddPulseOneHangfireProducer(builder.Configuration);
+
+// Phase 3: SignalR hub that streams report-completion events to per-tenant groups. The worker
+// notifies tenants through the IReportNotifier seam implemented over this hub.
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IReportNotifier, SignalRReportNotifier>();
+
 // Auth endpoints are throttled independently of the webhook (security rules #5/#6).
 builder.Services.AddRateLimiter(o =>
 {
@@ -98,6 +110,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", phase = 1 }))
     .AllowAnonymous();
 
 app.MapAuthEndpoints();
+
+// Tenant clients connect here to receive report-completion notifications for their own group.
+app.MapHub<ReportHub>("/hubs/reports");
 
 app.Run();
 

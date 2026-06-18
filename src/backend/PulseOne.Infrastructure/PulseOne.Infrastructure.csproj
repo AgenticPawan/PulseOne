@@ -13,6 +13,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Options" />
+
+    <!-- Phase 3: Hangfire abstractions (job contracts, filters, DLQ) live in Infrastructure so
+         both the producer (WebApi) and consumer (BackgroundWorker) share one definition. -->
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="OpenTelemetry.Api" />
   </ItemGroup>
 
   <!--
