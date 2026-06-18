@@ -7,6 +7,13 @@
   <ItemGroup>
     <!-- PBAC requirement + handler implement ASP.NET Core's IAuthorizationRequirement. -->
     <PackageReference Include="Microsoft.AspNetCore.Authorization" />
+
+    <!-- CQRS pipeline + validation. The DbContext seam (IApplicationDbContext) needs DbSet<T>. -->
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
 </Project>

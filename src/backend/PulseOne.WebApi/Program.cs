@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using PulseOne.Application;
+using PulseOne.Application.Abstractions;
 using PulseOne.Infrastructure.MultiTenancy;
+using PulseOne.Infrastructure.Persistence;
 using PulseOne.Infrastructure.Persistence.Catalog;
 using PulseOne.SharedKernel.Caching;
 using PulseOne.SharedKernel.Middleware;
@@ -40,6 +43,25 @@ builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_ =>
 
 // Phase 1: OIDC/JWT bearer validation, claims normalization, host boundary, PBAC.
 builder.Services.AddPulseOneAuth(builder.Configuration);
+
+// Phase 2: CQRS pipeline (MediatR + logging/validation/transaction behaviors + validators).
+builder.Services.AddApplication();
+
+// Per-tenant business shard. The factory resolves the shard connection string from the (cached)
+// Tenant Catalog; the ApplicationDbContext it builds owns the named query filters and audit writer.
+builder.Services.AddScoped<IShardDbContextFactory, ShardDbContextFactory>();
+
+// Bind the business shard to the request's resolved tenant. TenantResolutionMiddleware runs before
+// any handler, so ITenantContext is resolved here; the catalog lookup behind CreateAsync is
+// Redis-cached (5-min TTL), so on the hot path this resolves from memory. Both ApplicationDbContext
+// and the IApplicationDbContext seam share the one scoped instance.
+builder.Services.AddScoped<ApplicationDbContext>(sp =>
+{
+    var factory = sp.GetRequiredService<IShardDbContextFactory>();
+    var tenant = sp.GetRequiredService<ITenantContext>();
+    return factory.CreateAsync(tenant.TenantId).GetAwaiter().GetResult();
+});
+builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
 // Auth endpoints are throttled independently of the webhook (security rules #5/#6).
 builder.Services.AddRateLimiter(o =>
