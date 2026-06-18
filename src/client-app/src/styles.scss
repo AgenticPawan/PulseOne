@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+// Per-tenant accent color (blueprint §6.5). Billing components and Razorpay Checkout's theme color
+// read this variable; a real tenant theme overrides it at runtime. Default is a neutral brand blue.
+:root {
+  --tenant-accent: #2563eb;
+}

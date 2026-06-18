@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using PulseOne.Application.Abstractions;
 
 namespace PulseOne.Application.Behaviors;
@@ -14,8 +15,17 @@ namespace PulseOne.Application.Behaviors;
 /// Queries (<see cref="IQuery{TResponse}"/>) are not <see cref="ICommand{TResponse}"/> and pass
 /// straight through — a read must never open a write transaction. The marker check, not the request
 /// name, decides: only commands are transactional.
+/// <para>
+/// LAZY DB RESOLUTION (Phase 4): the <see cref="IApplicationDbContext"/> is resolved from the request
+/// scope ONLY when the request is actually a command, not in the behavior's constructor. The
+/// tenant-bound <c>ApplicationDbContext</c> registration eagerly throws <c>TenantResolutionException</c>
+/// when no tenant is resolved, so eager injection here would fault the pipeline for legitimately
+/// tenant-less, non-mutating requests such as the anonymous Razorpay webhook (which fast-acks and
+/// enqueues — security rule #6 — and never opens a transaction). Deferring resolution keeps the
+/// pipeline fail-closed for commands while not coupling read/enqueue-only requests to a tenant.
+/// </para>
 /// </remarks>
-public sealed class TransactionBehavior<TRequest, TResponse>(IApplicationDbContext dbContext)
+public sealed class TransactionBehavior<TRequest, TResponse>(IServiceProvider serviceProvider)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
@@ -27,6 +37,8 @@ public sealed class TransactionBehavior<TRequest, TResponse>(IApplicationDbConte
         if (request is not ICommand<TResponse>)
             return await next();
 
+        // Resolve the (tenant-bound) DbContext only for commands — see remarks.
+        var dbContext = serviceProvider.GetRequiredService<IApplicationDbContext>();
         await using var transaction = await dbContext.BeginTransactionAsync(cancellationToken);
 
         var response = await next();

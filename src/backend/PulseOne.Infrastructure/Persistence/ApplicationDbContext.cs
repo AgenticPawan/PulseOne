@@ -33,6 +33,12 @@ public sealed class ApplicationDbContext(
 
     public DbSet<Report> Reports => Set<Report>();
 
+    /// <summary>Razorpay subscriptions applied by the webhook worker (blueprint §6.3 / Module 5).</summary>
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+
+    /// <summary>Captured Razorpay payments recorded by the webhook worker (blueprint §6.3 / Module 5).</summary>
+    public DbSet<Payment> Payments => Set<Payment>();
+
     public DbSet<TenantRole> TenantRoles => Set<TenantRole>();
 
     public DbSet<TenantUserRole> TenantUserRoles => Set<TenantUserRole>();
@@ -212,6 +218,37 @@ public sealed class ApplicationDbContext(
             b.Property(r => r.CreatedBy).HasMaxLength(128);
             b.Property(r => r.UpdatedBy).HasMaxLength(128);
             b.HasIndex(r => new { r.TenantId, r.Status });
+        });
+
+        modelBuilder.Entity<Subscription>(b =>
+        {
+            b.ToTable("Subscriptions");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Id).HasMaxLength(64);
+            b.Property(s => s.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(s => s.RazorpaySubscriptionId).HasMaxLength(64).IsRequired();
+            b.Property(s => s.PlanId).HasMaxLength(64).IsRequired();
+            b.Property(s => s.Status).HasMaxLength(32).IsRequired();
+            b.Property(s => s.CreatedBy).HasMaxLength(128);
+            b.Property(s => s.UpdatedBy).HasMaxLength(128);
+            // Upsert key for the idempotent applier: one row per (tenant, Razorpay subscription).
+            b.HasIndex(s => new { s.TenantId, s.RazorpaySubscriptionId }).IsUnique();
+        });
+
+        modelBuilder.Entity<Payment>(b =>
+        {
+            b.ToTable("Payments");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.Id).HasMaxLength(64);
+            b.Property(p => p.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(p => p.RazorpayPaymentId).HasMaxLength(64).IsRequired();
+            b.Property(p => p.RazorpayOrderId).HasMaxLength(64);
+            b.Property(p => p.Currency).HasMaxLength(8).IsRequired();
+            b.Property(p => p.Status).HasMaxLength(32).IsRequired();
+            b.Property(p => p.CreatedBy).HasMaxLength(128);
+            b.Property(p => p.UpdatedBy).HasMaxLength(128);
+            // Upsert key for the idempotent applier: one row per (tenant, Razorpay payment).
+            b.HasIndex(p => new { p.TenantId, p.RazorpayPaymentId }).IsUnique();
         });
 
         modelBuilder.Entity<TenantRole>(b =>

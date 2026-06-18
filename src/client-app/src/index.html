@@ -5,6 +5,23 @@
     <title>PulseOne — Tenant Portal</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      Content Security Policy — CORRECTED for Razorpay (blueprint §4, Appendix A defect #8).
+      v1's policy blocked checkout; this allows checkout.js (script-src), the checkout iframe
+      (frame-src), and Razorpay's API/telemetry XHR (connect-src) while keeping the default-src
+      locked to 'self'. In production this header is also enforced at Azure Front Door / the API;
+      the meta tag documents and enforces it for the static SPA bundle.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src  'self' https://checkout.razorpay.com;
+        frame-src   https://api.razorpay.com https://checkout.razorpay.com;
+        connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com;
+        img-src     'self' data: https://*.razorpay.com;
+      "
+    />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
   <body>

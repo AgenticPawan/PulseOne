@@ -87,6 +87,13 @@ builder.Services.AddSingleton<IReportBlobStore, ReportBlobStore>();
 
 builder.Services.AddScoped<ReportProcessorJob>();
 
+// Phase 4: the Razorpay webhook applier. Enqueued by the producer as IRazorpaySubscriptionProcessor;
+// Hangfire activates this concrete type from the worker's DI scope and applies the verified event
+// exactly once (blueprint §6.3). Registered against the interface so Enqueue<IRazorpaySubscriptionProcessor>
+// resolves here.
+builder.Services.AddScoped<PulseOne.Application.Features.Billing.IRazorpaySubscriptionProcessor,
+    PulseOne.BackgroundWorker.Jobs.RazorpaySubscriptionProcessor>();
+
 // --- Dead-letter store + alerting ---------------------------------------------------------------
 builder.Services.AddSingleton<IDeadLetterStore>(sp =>
     new EfDeadLetterStore(hangfireConnection, sp.GetRequiredService<ILogger<EfDeadLetterStore>>()));

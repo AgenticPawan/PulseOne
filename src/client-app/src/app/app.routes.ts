@@ -14,4 +14,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./app').then((m) => m.App),
   },
+  {
+    // Phase 4 billing slice (full tenant portal is Phase 6). Lazy-loaded standalone component.
+    path: 'billing',
+    canActivate: [MsalGuard],
+    loadComponent: () =>
+      import('./features/billing/billing-page.component').then((m) => m.BillingPageComponent),
+  },
 ];

@@ -14,6 +14,14 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+
+    <!-- Phase 4: the Razorpay webhook handler enqueues IRazorpaySubscriptionProcessor onto Hangfire
+         (fast-ack, security rule #6). Hangfire.Core supplies IBackgroundJobClient + [Queue]. -->
+    <PackageReference Include="Hangfire.Core" />
+    <!-- Forward-pin Hangfire's transitive Newtonsoft.Json (11.0.1) past GHSA-5crp-9r3c-p9vr (NU1903),
+         matching the pin already applied in WebApi/Infrastructure/BackgroundWorker. -->
+    <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 
 </Project>
