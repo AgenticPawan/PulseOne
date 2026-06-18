@@ -16,19 +16,11 @@ run_backend_checks() {
     dotnet format src/backend/PulseOne.sln --verify-no-changes --severity warn
   fi
 
-  # Build
+  # Build (incremental — this hook fires after every Write, so a clean rebuild each time is
+  # wasteful; incremental keeps repeated post-write checks cheap). The full test suite + code
+  # coverage is intentionally NOT run here; it runs once at phase end via phase-complete.sh.
   echo "Building solution..."
-  dotnet build src/backend/PulseOne.sln --configuration Release --no-incremental 2>&1 | tail -20
-
-  # Unit tests
-  echo "Running unit tests..."
-  dotnet test src/backend/ \
-    --configuration Release \
-    --no-build \
-    --logger "trx" \
-    --results-directory TestResults/ \
-    --collect "XPlat Code Coverage" \
-    2>&1 | tail -30
+  dotnet build src/backend/PulseOne.sln --configuration Release 2>&1 | tail -20
 }
 
 run_angular_checks() {

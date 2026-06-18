@@ -19,8 +19,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-generate.sh",
-            "description": "Run lint and build verification after code generation"
+            "command": "bash .claude/hooks/post-generate.sh \"$PULSEONE_PHASE\"",
+            "description": "Run lint and incremental build verification after code generation (phase from $PULSEONE_PHASE)"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/phase-complete.sh \"$PULSEONE_PHASE\"",
+            "description": "Run the full test suite + code coverage once, at the end of a phase"
           }
         ]
       }
@@ -29,7 +40,8 @@
   "env": {
     "DOTNET_ENVIRONMENT": "Development",
     "PULSEONE_PROJECT_ROOT": "e:/GITHUB/PulseOne",
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "PULSEONE_PHASE": "3"
   },
   "includeFiles": [
     "CLAUDE.md",

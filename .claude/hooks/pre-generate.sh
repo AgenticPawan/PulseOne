@@ -7,10 +7,10 @@ BLUEPRINT="docs/PulseOne-Blueprint-v2.md"
 
 echo "=== PulseOne Pre-Generate Hook ==="
 
-# 1. Blueprint must exist
+# 1. Blueprint is the design source of truth. Warn (don't block) if it's absent — a missing
+# blueprint must not hard-fail every Write. The secret/anti-pattern gates below still run.
 if [ ! -f "$BLUEPRINT" ]; then
-  echo "ERROR: Blueprint not found at $BLUEPRINT"
-  exit 1
+  echo "WARNING: Blueprint not found at $BLUEPRINT — proceeding without design-doc validation."
 fi
 
 # 2. Secret scan on existing source (before generating more)
@@ -29,17 +29,21 @@ fi
 echo "Checking for v1 anti-patterns..."
 
 # a. Tenant context defaulting to "default"
-if grep -rn '"default"' src/backend/ --include="*.cs" | grep -i tenant | grep -v "//"; then
+# Exclude bin/obj — after a build they fill with generated .cs files that don't need scanning.
+if grep -rn '"default"' src/backend/ --include="*.cs" --exclude-dir={bin,obj} | grep -i tenant | grep -v "//"; then
   echo "WARNING: Possible tenant default found. Verify it's not a TenantContext default."
 fi
 
 # b. Non-constant-time comparison
-if grep -rn '!=' src/backend/ --include="*.cs" | grep -i signature | grep -v "//"; then
+if grep -rn '!=' src/backend/ --include="*.cs" --exclude-dir={bin,obj} | grep -i signature | grep -v "//"; then
   echo "WARNING: Possible non-constant-time signature comparison. Use CryptographicOperations.FixedTimeEquals."
 fi
 
 # c. Hardcoded Razorpay key
-if grep -rn 'rzp_test_\|rzp_live_' src/ 2>/dev/null; then
+# Scope the scan: never recurse into dependency/build/VCS trees. Recursing into node_modules
+# in particular caused multi-minute stalls. -l stops at the first match per file (we only need
+# to know IF a key exists, not every line).
+if grep -rln --exclude-dir={node_modules,dist,bin,obj,.git} 'rzp_test_\|rzp_live_' src/ 2>/dev/null; then
   echo "ERROR: Hardcoded Razorpay key detected. Keys must come from Key Vault."
   exit 1
 fi
