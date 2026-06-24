@@ -11,6 +11,7 @@ namespace PulseOne.Billing.Tests;
 /// computed under the Key Vault-sourced secret and compared in constant time. These tests would FAIL
 /// against the v1 hardcoded-secret / non-constant-time implementation.
 /// </summary>
+[Trait("Category", "Webhook")]
 public sealed class RazorpayWebhookVerifierTests
 {
     private const string Secret = "test-webhook-secret-not-a-real-key";

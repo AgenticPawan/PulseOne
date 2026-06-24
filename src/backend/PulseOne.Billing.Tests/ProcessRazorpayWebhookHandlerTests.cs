@@ -13,6 +13,7 @@ namespace PulseOne.Billing.Tests;
 /// spoofed signatures are rejected (no enqueue), valid deliveries enqueue exactly once, and duplicate
 /// event ids are suppressed (acked, NOT re-enqueued). These would all fail against v1.
 /// </summary>
+[Trait("Category", "Webhook")]
 public sealed class ProcessRazorpayWebhookHandlerTests
 {
     private const string Secret = "test-webhook-secret-not-a-real-key";
@@ -79,5 +80,36 @@ public sealed class ProcessRazorpayWebhookHandlerTests
         Assert.Equal(WebhookOutcome.Verified, first);
         Assert.Equal(WebhookOutcome.Duplicate, second);   // Razorpay retry — acked but not re-applied
         Assert.Equal(1, jobs.CreateCount);                // enqueued ONCE across both deliveries
+    }
+
+    [Fact]
+    public async Task Malformed_hex_signature_returns_InvalidSignature()
+    {
+        var (handler, jobs) = NewHandler();
+
+        // A non-hex signature makes the verifier's Convert.FromHexString throw internally; the verifier
+        // swallows it to false, so the handler must classify it as InvalidSignature and enqueue nothing.
+        var outcome = await handler.Handle(
+            new ProcessRazorpayWebhookCommand(Body, Signature: "not-hex-at-all", EventId: "evt_bad_hex"),
+            CancellationToken.None);
+
+        Assert.Equal(WebhookOutcome.InvalidSignature, outcome);
+        Assert.Equal(0, jobs.CreateCount);
+    }
+
+    [Fact]
+    public async Task Empty_event_id_is_treated_as_unique()
+    {
+        // An empty event id must not collide with other events: the dedup key must stay distinct, so a
+        // first delivery with "" still verifies and enqueues (it does not look like a duplicate).
+        var dedupe = new InMemoryDeduplicationStore();
+        var (handler, jobs) = NewHandler(dedupe);
+
+        var outcome = await handler.Handle(
+            new ProcessRazorpayWebhookCommand(Body, SignHex(Body), EventId: ""),
+            CancellationToken.None);
+
+        Assert.Equal(WebhookOutcome.Verified, outcome);
+        Assert.Equal(1, jobs.CreateCount);
     }
 }

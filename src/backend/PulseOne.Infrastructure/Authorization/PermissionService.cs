@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PulseOne.Application.Authorization;
 using PulseOne.Infrastructure.Persistence;
 using PulseOne.SharedKernel.Caching;
@@ -14,7 +15,19 @@ namespace PulseOne.Infrastructure.Authorization;
 /// always filters on the supplied tenant, so a grant in tenant A is invisible in tenant B
 /// (constraint 02-pbac-permissions.md).
 /// </summary>
-public sealed class PermissionService(ApplicationDbContext db, ICacheService cache) : IPermissionService
+/// <remarks>
+/// FIXED (Phase 7, surfaced by the host-boundary integration test): the shard
+/// <see cref="ApplicationDbContext"/> is resolved LAZILY (via <see cref="IServiceProvider"/>), not via
+/// the constructor. The ASP.NET Core authorization middleware constructs every
+/// <c>IAuthorizationHandler</c> — and therefore this service — on EVERY authorized request, including
+/// host-operator requests that carry NO tenant_id. Eager construction of the fail-closed, tenant-bound
+/// <see cref="ApplicationDbContext"/> threw <c>TenantResolutionException</c> (HTTP 500) for those
+/// requests before <c>PermissionAuthorizationHandler</c> could short-circuit host operators. Deferring
+/// resolution to the point of an actual shard read keeps host operators (and cache hits / missing
+/// inputs) off the tenant context entirely while preserving full per-request tenant scoping for
+/// genuine tenant reads.
+/// </remarks>
+public sealed class PermissionService(IServiceProvider services, ICacheService cache) : IPermissionService
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
 
@@ -51,6 +64,11 @@ public sealed class PermissionService(ApplicationDbContext db, ICacheService cac
         var cached = await cache.GetAsync<string[]>(key, ct);
         if (cached is not null)
             return new HashSet<string>(cached, StringComparer.Ordinal);
+
+        // Resolve the tenant-bound shard context ONLY now that a real read is required (a genuine
+        // tenant principal with a cache miss). Host operators and cache hits never reach this line,
+        // so they never touch the fail-closed tenant context.
+        var db = services.GetRequiredService<ApplicationDbContext>();
 
         // Roles assigned to the user in this tenant, flattened to their permission names.
         // IgnoreQueryFilters is NOT used: the tenant filter (Phase 2) plus the explicit

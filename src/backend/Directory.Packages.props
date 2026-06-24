@@ -42,6 +42,13 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!-- NSubstitute is the project's mandated mocking library (CLAUDE.md/Phase 7 constraint: NOT Moq). -->
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <!-- SQLite is the REAL relational provider used for tenant-isolation tests; EF Core 10 named query
+         filters need a relational provider (UseInMemoryDatabase does not enforce them the same way). -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <!-- WebApplicationFactory-based host-boundary integration tests. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
 
     <!-- OpenTelemetry (versions aligned with Azure.Monitor.OpenTelemetry.AspNetCore 1.3.0 transitive mins) -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
