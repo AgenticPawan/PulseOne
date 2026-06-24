@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="JunitXml.TestLogger" />
     <PackageReference Include="NSubstitute" />
     <!-- REAL relational provider: EF Core 10 named query filters require it (the prompt + CLAUDE.md
          forbid UseInMemoryDatabase here because it does not enforce filters the same way). -->

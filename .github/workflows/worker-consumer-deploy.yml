@@ -1,8 +1,12 @@
 name: worker-consumer-deploy
 
 # Deploys the Hangfire background worker (PulseOne.BackgroundWorker) to Azure Container Apps.
-# The worker scales on the KEDA MSSQL trigger (Phase 3). Like the API, it deploys only after
-# the MigrationRunner job has completed successfully.
+# The worker scales on the KEDA MSSQL trigger (Phase 3): KEDA queries the Hangfire job queue depth
+# and scales replicas out/in. Like the API, it deploys only AFTER the schema is current — but the
+# api-producer-deploy workflow owns the MigrationRunner gate, so here we deploy the worker image
+# and then verify the KEDA scale rule is intact on the new revision.
+#
+# Auth is GitHub OIDC federated identity — NO long-lived client secrets (CLAUDE.md security rule #1).
 on:
   workflow_dispatch:
   push:
@@ -16,32 +20,98 @@ permissions:
   contents: read
 
 env:
-  RESOURCE_GROUP: rg-pulseone-prod
+  REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+  RESOURCE_GROUP: ${{ vars.ACA_RESOURCE_GROUP }}
   WORKER_APP: pulseone-backgroundworker
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
     name: Build & push worker image
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - name: Build solution
+      - name: Build & test solution
         working-directory: src/backend
-        run: dotnet build PulseOne.sln --configuration Release
-      # TODO(Phase 8): docker build/push of PulseOne.BackgroundWorker to ACR via OIDC.
+        run: |
+          dotnet build PulseOne.sln --configuration Release
+          dotnet test PulseOne.sln --configuration Release --no-build
 
-  deploy:
-    name: Deploy worker revision
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Deploy
-        run: echo "TODO(Phase 8): az containerapp update --name $WORKER_APP (KEDA MSSQL scaler)."
+
+      - name: Build & push worker image (ACR remote build)
+        run: |
+          az acr build \
+            --registry "${REGISTRY%%.*}" \
+            --image "pulseone-backgroundworker:${IMAGE_TAG}" \
+            --image "pulseone-backgroundworker:latest" \
+            --file src/backend/PulseOne.BackgroundWorker/Dockerfile \
+            src/backend
+
+  deploy:
+    name: Deploy worker revision
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy new worker revision
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          az containerapp update \
+            --name "$WORKER_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${REGISTRY}/pulseone-backgroundworker:${IMAGE_TAG}" \
+            --revision-suffix "sha${IMAGE_TAG:0:7}"
+
+      # Verify the KEDA MSSQL scale rule survived the revision update. The worker must keep a
+      # custom (mssql) scale rule with minReplicas 0 so it scales to zero when the queue drains and
+      # scales out under load. A missing/zero scale-rule count means the worker would never wake.
+      - name: Verify KEDA MSSQL scale rule is healthy
+        run: |
+          set -euo pipefail
+          RULES=$(az containerapp show \
+            --name "$WORKER_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "properties.template.scale.rules[?custom.type=='mssql'] | length(@)" -o tsv)
+          MIN=$(az containerapp show \
+            --name "$WORKER_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "properties.template.scale.minReplicas" -o tsv)
+          echo "mssql scale rules: $RULES, minReplicas: $MIN"
+          if [ "$RULES" -lt 1 ]; then
+            echo "KEDA MSSQL scale rule is missing on the worker — the queue would never scale workers out." >&2
+            exit 1
+          fi
+          echo "KEDA MSSQL scaler is configured."
+
+      # Confirm the new revision actually provisioned (status Healthy/Provisioned), independent of
+      # replica count (the worker legitimately sits at 0 replicas when the queue is empty).
+      - name: Verify worker revision provisioned
+        run: |
+          set -euo pipefail
+          ACTIVE=$(az containerapp revision list \
+            --name "$WORKER_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?properties.active].properties.provisioningState | [0]" -o tsv)
+          echo "Active revision provisioning state: $ACTIVE"
+          if [ "$ACTIVE" != "Provisioned" ]; then
+            echo "Worker revision did not provision cleanly: $ACTIVE" >&2
+            exit 1
+          fi

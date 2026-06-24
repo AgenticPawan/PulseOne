@@ -1,0 +1,150 @@
+name: ci-tests
+
+# Phase 8: wires the Phase 7 test estate into CI so it gates every merge to main.
+# Two layers:
+#   1. Backend test suite — the full `dotnet test` run plus the Production-Readiness-Scorecard
+#      category gates (Isolation / Webhook / Authorization) surfaced as their own jobs so a
+#      failing scorecard gate is unambiguous in the checks UI.
+#   2. Accessibility gate — Playwright + axe-core (WCAG 2.2 AA). This is a HARD gate (blueprint §7.4):
+#      the axe violations array must be empty for every critical tenant journey.
+#
+# Make BOTH the backend suite and the accessibility gate REQUIRED status checks on the main branch
+# protection rule (documented in README "Production Readiness Gates").
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  SOLUTION: src/backend/PulseOne.sln
+
+jobs:
+  # --- Full backend suite -----------------------------------------------------------------------
+  backend-tests:
+    name: Backend tests (full suite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+      - name: Test
+        run: >
+          dotnet test ${{ env.SOLUTION }}
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --logger "junit;LogFileName=test-results.xml"
+          --results-directory ${{ github.workspace }}/test-results
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: ${{ github.workspace }}/test-results/**/*.xml
+
+  # --- Scorecard category gates -----------------------------------------------------------------
+  # Each runs only the trait-filtered slice so a regression in a security-critical area is named
+  # explicitly in the checks list. Categories match the [Trait("Category", ...)] attributes:
+  #   Isolation      -> PulseOne.Infrastructure.Tests/Isolation
+  #   Webhook        -> PulseOne.Billing.Tests (Razorpay verify + dedup)
+  #   Authorization  -> PulseOne.WebApi.Tests/Authorization (HostOperatorsOnly 403 + tenant PBAC)
+  scorecard-gates:
+    name: Scorecard gate (${{ matrix.gate.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gate:
+          - name: tenant-isolation
+            project: src/backend/PulseOne.Infrastructure.Tests
+            filter: Category=Isolation
+          - name: webhook-suite
+            project: src/backend/PulseOne.Billing.Tests
+            filter: Category=Webhook
+          - name: host-boundary-403
+            project: src/backend/PulseOne.WebApi.Tests
+            filter: Category=Authorization
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Run ${{ matrix.gate.name }}
+        run: >
+          dotnet test ${{ matrix.gate.project }}
+          --configuration Release
+          --filter "${{ matrix.gate.filter }}"
+          --logger "trx;LogFileName=${{ matrix.gate.name }}.trx"
+          --logger "junit;LogFileName=${{ matrix.gate.name }}.xml"
+          --results-directory ${{ github.workspace }}/test-results
+      - name: Upload ${{ matrix.gate.name }} results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-${{ matrix.gate.name }}
+          path: ${{ github.workspace }}/test-results/**/*.xml
+
+  # --- Accessibility gate (axe-core) ------------------------------------------------------------
+  # HARD gate: the tenant SPA is built and served, then Playwright drives axe-core over the
+  # critical journeys (dashboard / reports / billing / settings). PULSEONE_TENANT_STORAGE_STATE
+  # supplies the pre-seeded authenticated session so the axe specs actually execute (without it
+  # accessibility.spec.ts test.skip()s itself and the gate would be a no-op).
+  accessibility:
+    name: Accessibility gate (axe-core, WCAG 2.2 AA)
+    runs-on: ubuntu-latest
+    env:
+      PULSEONE_BASE_URL: http://localhost:4200
+      PULSEONE_TENANT_STORAGE_STATE: ${{ github.workspace }}/e2e-tests/.auth/tenant.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Build + serve the tenant SPA. The preview server backgrounds; the wait step blocks until it
+      # answers before Playwright runs.
+      - name: Install tenant app deps
+        working-directory: src/client-app
+        run: npm ci
+      - name: Build tenant app
+        working-directory: src/client-app
+        run: npm run build
+      - name: Serve tenant app
+        working-directory: src/client-app
+        run: npx http-server dist/*/browser -p 4200 -s &
+      - name: Wait for tenant app
+        run: npx --yes wait-on http://localhost:4200 --timeout 120000
+      - name: Install e2e deps
+        working-directory: e2e-tests
+        run: npm ci
+      - name: Install Playwright browsers
+        working-directory: e2e-tests
+        run: npx playwright install --with-deps chromium
+      # Provision the pre-seeded session storage state from a CI secret (base64-encoded Playwright
+      # storageState JSON). If the secret is absent the axe specs skip themselves — the gate then
+      # reports green but does NOT actually assert a11y, which is why the secret MUST be configured
+      # for this gate to be meaningful (documented in README + secret-rotation runbook).
+      - name: Provision tenant auth state
+        if: ${{ secrets.PULSEONE_E2E_TENANT_STATE_B64 != '' }}
+        env:
+          PULSEONE_E2E_TENANT_STATE_B64: ${{ secrets.PULSEONE_E2E_TENANT_STATE_B64 }}
+        run: |
+          mkdir -p e2e-tests/.auth
+          echo "$PULSEONE_E2E_TENANT_STATE_B64" | base64 -d > e2e-tests/.auth/tenant.json
+      - name: Run axe-core accessibility gate
+        working-directory: e2e-tests
+        run: npx playwright test specs/accessibility.spec.ts --project=chromium
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: e2e-tests/playwright-report

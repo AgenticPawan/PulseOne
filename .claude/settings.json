@@ -46,7 +46,7 @@
     "DOTNET_ENVIRONMENT": "Development",
     "PULSEONE_PROJECT_ROOT": "e:/GITHUB/PulseOne",
     "NODE_ENV": "development",
-    "PULSEONE_PHASE": "7"
+    "PULSEONE_PHASE": "8"
   },
   "includeFiles": [
     "CLAUDE.md",

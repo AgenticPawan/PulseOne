@@ -2,7 +2,11 @@ name: api-producer-deploy
 
 # Deploys the stateless producer API (PulseOne.WebApi) to Azure Container Apps.
 # CRITICAL ORDERING (blueprint §5): run the MigrationRunner ACA Job and wait for it to
-# succeed BEFORE shifting traffic to a new revision. Migrations never run at app startup.
+# succeed BEFORE shifting traffic to a new revision. Migrations NEVER run at app startup.
+#
+# Auth is GitHub OIDC federated identity (azure/login@v2) — there are NO long-lived client
+# secrets in this repo or in GitHub (CLAUDE.md security rule #1; gitleaks gate enforces it).
+# Azure resource identifiers come from GitHub Environment variables/secrets, not from source.
 on:
   workflow_dispatch:
   push:
@@ -16,29 +20,64 @@ permissions:
   contents: read
 
 env:
-  REGISTRY: <KEY_VAULT_REFERENCE: acr-login-server>
-  RESOURCE_GROUP: rg-pulseone-prod
+  # Non-secret Azure identifiers come from GitHub Environment VARIABLES (vars.*). The registry login
+  # server, RG, ACA environment, and resource names are configuration, not secrets.
+  REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+  RESOURCE_GROUP: ${{ vars.ACA_RESOURCE_GROUP }}
   MIGRATION_JOB: pulseone-migrationrunner-job
   API_APP: pulseone-webapi
+  # Built once, threaded through every job via outputs so all three images share the commit SHA tag.
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
     name: Build & push API image
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
+
+      # Compile + run the full backend suite first: never ship an image that fails tests.
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - name: Build solution
+      - name: Build & test solution
         working-directory: src/backend
-        run: dotnet build PulseOne.sln --configuration Release
-      # TODO(Phase 8): docker build/push of PulseOne.WebApi to ACR via azure/login (OIDC).
+        run: |
+          dotnet build PulseOne.sln --configuration Release
+          dotnet test PulseOne.sln --configuration Release --no-build
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Remote build in ACR (no local Docker daemon). Both the API image and the MigrationRunner
+      # image are built from the same commit so the schema the runner applies matches the code the
+      # API ships. Build context is the backend solution root.
+      - name: Build & push API image (ACR remote build)
+        run: |
+          az acr build \
+            --registry "${REGISTRY%%.*}" \
+            --image "pulseone-webapi:${IMAGE_TAG}" \
+            --image "pulseone-webapi:latest" \
+            --file src/backend/PulseOne.WebApi/Dockerfile \
+            src/backend
+
+      - name: Build & push MigrationRunner image (ACR remote build)
+        run: |
+          az acr build \
+            --registry "${REGISTRY%%.*}" \
+            --image "pulseone-migrationrunner:${IMAGE_TAG}" \
+            --file src/backend/PulseOne.MigrationRunner/Dockerfile \
+            src/backend
 
   migrate:
     name: Run migrations (one-shot ACA Job)
     needs: build
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: azure/login@v2
@@ -46,15 +85,94 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Start MigrationRunner job and wait
-        # az containerapp job start --name $MIGRATION_JOB ... then poll execution status.
-        # Fail the deploy if the job execution status is not "Succeeded".
-        run: echo "TODO(Phase 8): trigger '$MIGRATION_JOB' and block until completion."
+
+      # Point the job at the freshly built image, start a single execution, then poll until it
+      # reaches a terminal state. The deploy ABORTS unless the execution status is "Succeeded"
+      # (exit code 0 from Program.cs). This is the gate that guarantees migrations precede traffic.
+      - name: Run MigrationRunner job and block until completion
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          echo "Pinning ${MIGRATION_JOB} to image ${REGISTRY}/pulseone-migrationrunner:${IMAGE_TAG}"
+          az containerapp job update \
+            --name "$MIGRATION_JOB" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${REGISTRY}/pulseone-migrationrunner:${IMAGE_TAG}"
+
+          echo "Starting migration job execution..."
+          EXECUTION=$(az containerapp job start \
+            --name "$MIGRATION_JOB" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query name -o tsv)
+          echo "Started execution: $EXECUTION"
+
+          # Poll for up to 12 minutes (job's own budget is 10 min; see MigrationRunner Program.cs).
+          DEADLINE=$(( SECONDS + 720 ))
+          STATUS="Running"
+          while [ $SECONDS -lt $DEADLINE ]; do
+            STATUS=$(az containerapp job execution show \
+              --name "$MIGRATION_JOB" \
+              --resource-group "$RESOURCE_GROUP" \
+              --job-execution-name "$EXECUTION" \
+              --query properties.status -o tsv)
+            echo "Migration execution status: $STATUS"
+            case "$STATUS" in
+              Succeeded) echo "Migrations succeeded."; exit 0 ;;
+              Failed|Degraded|Cancelled) echo "Migration job did not succeed: $STATUS" >&2; exit 1 ;;
+            esac
+            sleep 15
+          done
+
+          echo "Timed out waiting for migration job to complete (last status: $STATUS)." >&2
+          exit 1
 
   deploy:
     name: Shift traffic to new API revision
     needs: migrate
     runs-on: ubuntu-latest
+    environment: production
     steps:
-      - name: Deploy new revision
-        run: echo "TODO(Phase 8): az containerapp update --name $API_APP after migrations succeed."
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Roll a new single revision now that migrations are confirmed applied. In single-revision
+      # mode ACA shifts 100% of traffic to the new revision automatically once it is healthy; the
+      # health probe defined on the app gates readiness before traffic arrives.
+      - name: Deploy new API revision
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          az containerapp update \
+            --name "$API_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${REGISTRY}/pulseone-webapi:${IMAGE_TAG}" \
+            --revision-suffix "sha${IMAGE_TAG:0:7}"
+
+      # Post-deploy smoke: poll the public health endpoint through the app FQDN until it answers
+      # 200 (timeout 5 min). The endpoint is AllowAnonymous (/health), so no token is required.
+      - name: Health check (/health)
+        run: |
+          set -euo pipefail
+          FQDN=$(az containerapp show \
+            --name "$API_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Probing https://${FQDN}/health"
+
+          DEADLINE=$(( SECONDS + 300 ))
+          while [ $SECONDS -lt $DEADLINE ]; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "https://${FQDN}/health" || echo 000)
+            echo "  /health -> $CODE"
+            if [ "$CODE" = "200" ]; then echo "API is healthy."; exit 0; fi
+            sleep 10
+          done
+
+          echo "API did not become healthy within 5 minutes." >&2
+          exit 1
