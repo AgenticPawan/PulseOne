@@ -4,8 +4,10 @@ using PulseOne.Application;
 using PulseOne.Application.Abstractions;
 using PulseOne.Application.Features.Billing;
 using PulseOne.Application.Features.HostAdmin;
+using PulseOne.Application.Features.TenantPortal;
 using PulseOne.Infrastructure.Billing;
 using PulseOne.Infrastructure.HostAdmin;
+using PulseOne.Infrastructure.TenantPortal;
 using PulseOne.Infrastructure.MultiTenancy;
 using PulseOne.Infrastructure.Persistence;
 using PulseOne.Infrastructure.Persistence.Catalog;
@@ -75,6 +77,11 @@ builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<Ap
 // business-shard access for the /api/v1/host/* endpoints (HostOperatorsOnly). Scoped — it builds
 // per-request host-scoped shard contexts.
 builder.Services.AddScoped<IHostAdminService, HostAdminService>();
+
+// Phase 6: tenant portal service. Runs inside the request's resolved tenant — reads/writes go
+// through the tenant-filtered ApplicationDbContext, so isolation is enforced by the named query
+// filters (no shard enumeration, no filter bypass). Backs /api/v1/{reports,dashboard,team,settings}.
+builder.Services.AddScoped<ITenantPortalService, TenantPortalService>();
 
 // Phase 3: producer-side Hangfire. Enqueues onto the isolated Hangfire backplane with ZERO server
 // workers — heavy compute runs on PulseOne.BackgroundWorker (the KEDA-scaled ACA consumer).
@@ -146,6 +153,10 @@ app.MapBillingEndpoints();
 
 // Phase 5: host admin portal API (tenants, subscriptions, audit, system health) — HostOperatorsOnly.
 app.MapHostEndpoints();
+
+// Phase 6: tenant portal API (reports, dashboard, team, settings) — per-permission PBAC policies,
+// tenant-scoped via TenantResolutionMiddleware.
+app.MapTenantEndpoints();
 
 // Tenant clients connect here to receive report-completion notifications for their own group.
 app.MapHub<ReportHub>("/hubs/reports");

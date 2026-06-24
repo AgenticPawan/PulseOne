@@ -87,6 +87,18 @@ builder.Services.AddSingleton<IReportBlobStore, ReportBlobStore>();
 
 builder.Services.AddScoped<ReportProcessorJob>();
 
+// Phase 6: tenant report generation enqueued by the producer as IReportGenerationJob. Resolve the
+// same concrete ReportProcessorJob so Enqueue<IReportGenerationJob> activates here.
+builder.Services.AddScoped<PulseOne.Application.Features.TenantPortal.IReportGenerationJob>(
+    sp => sp.GetRequiredService<ReportProcessorJob>());
+
+// Phase 6: team invitation email + tenant data export, enqueued by the tenant API and activated
+// from the worker DI scope.
+builder.Services.AddScoped<PulseOne.Application.Features.TenantPortal.IInvitationEmailJob,
+    PulseOne.BackgroundWorker.Jobs.InvitationEmailJob>();
+builder.Services.AddScoped<PulseOne.Application.Features.TenantPortal.IDataExportJob,
+    PulseOne.BackgroundWorker.Jobs.DataExportJob>();
+
 // Phase 4: the Razorpay webhook applier. Enqueued by the producer as IRazorpaySubscriptionProcessor;
 // Hangfire activates this concrete type from the worker's DI scope and applies the verified event
 // exactly once (blueprint §6.3). Registered against the interface so Enqueue<IRazorpaySubscriptionProcessor>

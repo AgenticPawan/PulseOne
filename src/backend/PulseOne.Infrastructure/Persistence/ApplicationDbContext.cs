@@ -43,6 +43,21 @@ public sealed class ApplicationDbContext(
 
     public DbSet<TenantUserRole> TenantUserRoles => Set<TenantUserRole>();
 
+    /// <summary>Per-tenant team-member state overlay (Phase 6 Team module).</summary>
+    public DbSet<TenantMember> TenantMembers => Set<TenantMember>();
+
+    /// <summary>Pending team invitations (Phase 6 Team module).</summary>
+    public DbSet<TeamInvitation> TeamInvitations => Set<TeamInvitation>();
+
+    /// <summary>Tenant company profile, one row per tenant (Phase 6 Settings).</summary>
+    public DbSet<TenantProfile> TenantProfiles => Set<TenantProfile>();
+
+    /// <summary>Per-tenant notification channel preferences (Phase 6 Settings).</summary>
+    public DbSet<TenantNotificationSetting> TenantNotificationSettings => Set<TenantNotificationSetting>();
+
+    /// <summary>Tenant-scoped API keys; only a SHA-256 hash is stored (Phase 6 Settings).</summary>
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
     /// <summary>
     /// Read per query. EF Core re-evaluates and parameterizes references to a DbContext-instance
     /// member, so the tenant value is read from the (fail-closed) <see cref="ITenantContext"/> on
@@ -273,6 +288,80 @@ public sealed class ApplicationDbContext(
             b.Property(ur => ur.RoleId).HasMaxLength(64).IsRequired();
             b.HasIndex(ur => new { ur.TenantId, ur.UserId });
             b.HasIndex(ur => new { ur.TenantId, ur.UserId, ur.RoleId }).IsUnique();
+        });
+
+        modelBuilder.Entity<TenantMember>(b =>
+        {
+            b.ToTable("TenantMembers");
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Id).HasMaxLength(64);
+            b.Property(m => m.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(m => m.UserId).HasMaxLength(128).IsRequired();
+            b.Property(m => m.Email).HasMaxLength(256);
+            b.Property(m => m.DisplayName).HasMaxLength(256);
+            b.Property(m => m.Status).HasMaxLength(16).IsRequired();
+            b.Property(m => m.CreatedBy).HasMaxLength(128);
+            b.Property(m => m.UpdatedBy).HasMaxLength(128);
+            // One state row per (tenant, user). The team list defaults users with no row to Active.
+            b.HasIndex(m => new { m.TenantId, m.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<TeamInvitation>(b =>
+        {
+            b.ToTable("TeamInvitations");
+            b.HasKey(i => i.Id);
+            b.Property(i => i.Id).HasMaxLength(64);
+            b.Property(i => i.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(i => i.Email).HasMaxLength(256).IsRequired();
+            b.Property(i => i.Role).HasMaxLength(128).IsRequired();
+            b.Property(i => i.Token).HasMaxLength(128).IsRequired();
+            b.Property(i => i.Status).HasMaxLength(16).IsRequired();
+            b.Property(i => i.CreatedBy).HasMaxLength(128);
+            b.Property(i => i.UpdatedBy).HasMaxLength(128);
+            b.HasIndex(i => new { i.TenantId, i.Email });
+        });
+
+        modelBuilder.Entity<TenantProfile>(b =>
+        {
+            b.ToTable("TenantProfiles");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.Id).HasMaxLength(64);
+            b.Property(p => p.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(p => p.CompanyName).HasMaxLength(256);
+            b.Property(p => p.ContactEmail).HasMaxLength(256);
+            b.Property(p => p.ContactPhone).HasMaxLength(32);
+            b.Property(p => p.LogoUrl).HasMaxLength(2048);
+            b.Property(p => p.CreatedBy).HasMaxLength(128);
+            b.Property(p => p.UpdatedBy).HasMaxLength(128);
+            // Exactly one profile row per tenant (the service upserts it).
+            b.HasIndex(p => p.TenantId).IsUnique();
+        });
+
+        modelBuilder.Entity<TenantNotificationSetting>(b =>
+        {
+            b.ToTable("TenantNotificationSettings");
+            b.HasKey(n => n.Id);
+            b.Property(n => n.Id).HasMaxLength(64);
+            b.Property(n => n.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(n => n.EventType).HasMaxLength(64).IsRequired();
+            b.Property(n => n.EventLabel).HasMaxLength(128).IsRequired();
+            b.Property(n => n.CreatedBy).HasMaxLength(128);
+            b.Property(n => n.UpdatedBy).HasMaxLength(128);
+            b.HasIndex(n => new { n.TenantId, n.EventType }).IsUnique();
+        });
+
+        modelBuilder.Entity<ApiKey>(b =>
+        {
+            b.ToTable("ApiKeys");
+            b.HasKey(k => k.Id);
+            b.Property(k => k.Id).HasMaxLength(64);
+            b.Property(k => k.TenantId).HasMaxLength(64).IsRequired();
+            b.Property(k => k.Name).HasMaxLength(128).IsRequired();
+            b.Property(k => k.Prefix).HasMaxLength(16).IsRequired();
+            b.Property(k => k.SecretHash).HasMaxLength(128).IsRequired();
+            b.Property(k => k.CreatedBy).HasMaxLength(128);
+            b.Property(k => k.UpdatedBy).HasMaxLength(128);
+            b.HasIndex(k => new { k.TenantId, k.Prefix });
         });
     }
 }

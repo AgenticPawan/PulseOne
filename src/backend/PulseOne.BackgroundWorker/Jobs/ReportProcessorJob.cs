@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PulseOne.Application.Features.TenantPortal;
 using PulseOne.BackgroundWorker.Engines;
 using PulseOne.BackgroundWorker.Storage;
 using PulseOne.CoreDomain.Entities;
@@ -34,7 +35,7 @@ public sealed class ReportProcessorJob(
     IEnumerable<IReportEngine> engines,
     IReportBlobStore blobStore,
     IReportNotifier notifier,
-    ILogger<ReportProcessorJob> log)
+    ILogger<ReportProcessorJob> log) : IReportGenerationJob
 {
     [Queue("default")]
     [AutomaticRetry(Attempts = 3, DelaysInSeconds = [30, 120, 300])]
