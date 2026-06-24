@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NSubstitute;
 using PulseOne.CoreDomain.Entities;
 using PulseOne.Infrastructure.Persistence;
@@ -113,13 +114,22 @@ public abstract class TenantIsolationTestBase : IAsyncLifetime
     }
 
     /// <summary>
-    /// Strips SQL Server-specific column types (e.g. <c>nvarchar(max)</c>) from the model so the SQLite
-    /// provider can generate valid DDL in <c>EnsureCreated</c>. Runs the standard customizer first, then
-    /// clears column-type annotations only — query filters, keys, and indexes are left intact.
+    /// Adapts the production (SQL Server) model so the SQLite provider can build and query it:
+    /// <list type="number">
+    ///   <item>strips SQL Server-specific column types (e.g. <c>nvarchar(max)</c>) so DDL is valid;</item>
+    ///   <item>maps <see cref="DateTimeOffset"/> to a sortable integer — SQLite cannot translate
+    ///         <c>ORDER BY</c> over <c>DateTimeOffset</c>, which production code legitimately does
+    ///         (e.g. ordering reports/keys by created time). The converter is transparent and round-trips
+    ///         the instant, so equality, filtering and ordering all behave as on SQL Server.</item>
+    /// </list>
+    /// Runs the standard customizer first; query filters, keys and indexes are left intact.
     /// </summary>
     private sealed class SqliteColumnTypeStrippingModelCustomizer(ModelCustomizerDependencies dependencies)
         : RelationalModelCustomizer(dependencies)
     {
+        private static readonly ValueConverter<DateTimeOffset, long> DateTimeOffsetToTicks = new(
+            d => d.UtcDateTime.Ticks, t => new DateTimeOffset(t, TimeSpan.Zero));
+
         public override void Customize(ModelBuilder modelBuilder, DbContext context)
         {
             base.Customize(modelBuilder, context);
@@ -130,6 +140,10 @@ public abstract class TenantIsolationTestBase : IAsyncLifetime
                 var columnType = property.GetColumnType();
                 if (columnType is not null && columnType.Contains("nvarchar", StringComparison.OrdinalIgnoreCase))
                     property.SetColumnType(null); // let SQLite use its default TEXT affinity
+
+                var clr = property.ClrType;
+                if (clr == typeof(DateTimeOffset) || clr == typeof(DateTimeOffset?))
+                    property.SetValueConverter(DateTimeOffsetToTicks);
             }
         }
     }
