@@ -4,7 +4,7 @@ import {
   provideAppInitializer,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import {
   HTTP_INTERCEPTORS,
   provideHttpClient,
@@ -37,7 +37,7 @@ import { AuthService } from './core/auth/auth.service';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptorsFromDi()),
 
     { provide: MSAL_INSTANCE, useFactory: msalInstanceFactory },

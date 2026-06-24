@@ -21,9 +21,13 @@ public sealed class TenantCatalogDbContext(DbContextOptions<TenantCatalogDbConte
             e.ToTable("TenantShards");
             e.HasKey(x => x.TenantId);
             e.Property(x => x.TenantId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            e.Property(x => x.AdminEmail).HasMaxLength(256).IsRequired();
             e.Property(x => x.ShardConnectionString).HasMaxLength(1024).IsRequired();
+            e.Property(x => x.ShardLabel).HasMaxLength(64).IsRequired();
             e.Property(x => x.Region).HasMaxLength(64).IsRequired();
             e.Property(x => x.Tier).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.CreatedAt).IsRequired();
             e.Property(x => x.IsActive).IsRequired();
             e.HasIndex(x => x.IsActive);
@@ -34,10 +38,14 @@ public sealed class TenantCatalogDbContext(DbContextOptions<TenantCatalogDbConte
             e.HasData(new TenantShard
             {
                 TenantId = "demo",
+                Name = "Demo Tenant",
+                AdminEmail = "admin@demo.pulseone.local",
                 ShardConnectionString =
                     "Server=(localdb)\\mssqllocaldb;Database=PulseOne_Shard01;Trusted_Connection=True;",
+                ShardLabel = "Shard01",
                 Region = "westindia",
                 Tier = TenantTier.Pro,
+                Status = TenantStatus.Active,
                 CreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
                 IsActive = true
             });

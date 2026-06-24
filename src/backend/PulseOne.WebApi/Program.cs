@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using PulseOne.Application;
 using PulseOne.Application.Abstractions;
 using PulseOne.Application.Features.Billing;
+using PulseOne.Application.Features.HostAdmin;
 using PulseOne.Infrastructure.Billing;
+using PulseOne.Infrastructure.HostAdmin;
 using PulseOne.Infrastructure.MultiTenancy;
 using PulseOne.Infrastructure.Persistence;
 using PulseOne.Infrastructure.Persistence.Catalog;
@@ -68,6 +70,11 @@ builder.Services.AddScoped<ApplicationDbContext>(sp =>
     return factory.CreateAsync(tenant.TenantId).GetAwaiter().GetResult();
 });
 builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+
+// Phase 5: host admin portal service. Reads the Tenant Catalog directly and brokers cross-tenant
+// business-shard access for the /api/v1/host/* endpoints (HostOperatorsOnly). Scoped — it builds
+// per-request host-scoped shard contexts.
+builder.Services.AddScoped<IHostAdminService, HostAdminService>();
 
 // Phase 3: producer-side Hangfire. Enqueues onto the isolated Hangfire backplane with ZERO server
 // workers — heavy compute runs on PulseOne.BackgroundWorker (the KEDA-scaled ACA consumer).
@@ -136,6 +143,9 @@ app.MapAuthEndpoints();
 
 // Phase 4: Razorpay webhook ingest + public-config + server-side payment verification (§6.3 / §6.5).
 app.MapBillingEndpoints();
+
+// Phase 5: host admin portal API (tenants, subscriptions, audit, system health) — HostOperatorsOnly.
+app.MapHostEndpoints();
 
 // Tenant clients connect here to receive report-completion notifications for their own group.
 app.MapHub<ReportHub>("/hubs/reports");

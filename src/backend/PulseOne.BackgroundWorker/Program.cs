@@ -94,6 +94,14 @@ builder.Services.AddScoped<ReportProcessorJob>();
 builder.Services.AddScoped<PulseOne.Application.Features.Billing.IRazorpaySubscriptionProcessor,
     PulseOne.BackgroundWorker.Jobs.RazorpaySubscriptionProcessor>();
 
+// Phase 5: cross-tenant audit export. Enqueued by the host API as IAuditExportJob; Hangfire
+// activates this concrete job from the worker's DI scope. It reuses the host admin service for the
+// cross-shard read, then streams the result to Excel + blob.
+builder.Services.AddScoped<PulseOne.Application.Features.HostAdmin.IHostAdminService,
+    PulseOne.Infrastructure.HostAdmin.HostAdminService>();
+builder.Services.AddScoped<PulseOne.Application.Features.HostAdmin.IAuditExportJob,
+    PulseOne.BackgroundWorker.Jobs.AuditExportJob>();
+
 // --- Dead-letter store + alerting ---------------------------------------------------------------
 builder.Services.AddSingleton<IDeadLetterStore>(sp =>
     new EfDeadLetterStore(hangfireConnection, sp.GetRequiredService<ILogger<EfDeadLetterStore>>()));

@@ -16,4 +16,11 @@ public interface ITenantCatalog
     /// Returns the shard connection string for the tenant, or null if the tenant is unknown.
     /// </summary>
     Task<string?> GetConnectionStringAsync(string tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Evicts the cached catalog entry for a tenant. The host admin portal calls this after a
+    /// shard reassignment or a lifecycle change (suspend/reactivate/provision) so the routing
+    /// pipeline observes the new state without waiting for the cache TTL to lapse.
+    /// </summary>
+    Task InvalidateAsync(string tenantId, CancellationToken ct = default);
 }

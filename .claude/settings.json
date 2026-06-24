@@ -32,6 +32,11 @@
             "type": "command",
             "command": "bash .claude/hooks/phase-complete.sh \"$PULSEONE_PHASE\"",
             "description": "Run the full test suite + code coverage once, at the end of a phase"
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/phase-metrics.py",
+            "description": "Capture consumed tokens for the phase and trigger a self-learning memory write"
           }
         ]
       }
@@ -41,7 +46,7 @@
     "DOTNET_ENVIRONMENT": "Development",
     "PULSEONE_PROJECT_ROOT": "e:/GITHUB/PulseOne",
     "NODE_ENV": "development",
-    "PULSEONE_PHASE": "4"
+    "PULSEONE_PHASE": "5"
   },
   "includeFiles": [
     "CLAUDE.md",

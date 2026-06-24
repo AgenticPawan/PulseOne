@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PulseOne.Infrastructure.Persistence.Catalog;
 
@@ -11,9 +12,11 @@ using PulseOne.Infrastructure.Persistence.Catalog;
 namespace PulseOne.Infrastructure.Migrations.Catalog
 {
     [DbContext(typeof(TenantCatalogDbContext))]
-    partial class TenantCatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260621091150_ExtendTenantShardCatalog")]
+    partial class ExtendTenantShardCatalog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
