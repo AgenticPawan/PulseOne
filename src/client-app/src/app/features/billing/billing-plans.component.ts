@@ -24,42 +24,58 @@ interface Plan {
   selector: 'pulseone-billing-plans',
   standalone: true,
   template: `
-    <section class="billing-plans">
-      <h2 class="billing-plans__title">Subscription plans</h2>
+    <section>
+      <h2 class="mb-4 text-lg font-semibold text-slate-900">Subscription plans</h2>
 
-      @if (plans.isLoading()) {
-        <p class="billing-plans__status">Loading plans…</p>
-      } @else if (plans.error()) {
-        <p class="billing-plans__status billing-plans__status--error">Could not load plans.</p>
-      } @else {
-        <div class="billing-plans__grid">
-          @for (plan of plans.value(); track plan.id) {
-            <article class="plan-card" [class.plan-card--current]="plan.isCurrent">
-              <h3 class="plan-card__name">{{ plan.name }}</h3>
-              <p class="plan-card__price">₹{{ plan.priceInRupees }}/mo</p>
-              <ul class="plan-card__features">
-                @for (feature of plan.features; track feature) {
-                  <li>{{ feature }}</li>
+      <div aria-live="polite">
+        @if (plans.isLoading()) {
+          <p class="text-sm text-slate-500" role="status">Loading plans…</p>
+        } @else if (plans.error()) {
+          <p class="text-sm text-red-700" role="alert">Could not load plans.</p>
+        } @else {
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            @for (plan of plans.value(); track plan.id) {
+              <article
+                class="flex flex-col gap-2 rounded-xl border p-5"
+                [class.border-slate-200]="!plan.isCurrent"
+                [class.border-[var(--tenant-accent,#2563eb)]]="plan.isCurrent"
+              >
+                <h3 class="font-semibold text-slate-900">{{ plan.name }}</h3>
+                <p class="text-2xl font-bold text-slate-900">₹{{ plan.priceInRupees }}/mo</p>
+                <ul class="flex-1 list-inside list-disc text-sm text-slate-600">
+                  @for (feature of plan.features; track feature) {
+                    <li>{{ feature }}</li>
+                  }
+                </ul>
+                @if (plan.isCurrent) {
+                  <span class="text-xs font-semibold text-[var(--tenant-accent,#2563eb)]">
+                    Current plan
+                  </span>
+                } @else {
+                  <button
+                    type="button"
+                    class="mt-auto rounded-md bg-[var(--tenant-accent,#2563eb)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                    (click)="upgrade(plan)"
+                  >
+                    Upgrade
+                  </button>
                 }
-              </ul>
-              @if (plan.isCurrent) {
-                <span class="plan-card__badge">Current plan</span>
-              } @else {
-                <button type="button" class="plan-card__upgrade" (click)="upgrade(plan)">
-                  Upgrade
-                </button>
-              }
-            </article>
-          }
-        </div>
-      }
+              </article>
+            }
+          </div>
+        }
+      </div>
 
       @if (toast()) {
-        <div class="billing-plans__toast" role="status">{{ toast() }}</div>
+        <div
+          class="mt-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          role="status"
+        >
+          {{ toast() }}
+        </div>
       }
     </section>
   `,
-  styleUrl: './billing-plans.component.scss',
 })
 export class BillingPlansComponent {
   private readonly billing = inject(RazorpayBillingService);

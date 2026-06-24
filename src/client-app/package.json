@@ -19,6 +19,7 @@
     "@angular/router": "^20.0.0",
     "@azure/msal-angular": "^4.0.0",
     "@azure/msal-browser": "^4.0.0",
+    "@microsoft/signalr": "^8.0.17",
     "rxjs": "~7.8.0",
     "tslib": "^2.6.0"
   },
@@ -26,9 +27,9 @@
     "@angular/build": "^20.0.0",
     "@angular/cli": "^20.0.0",
     "@angular/compiler-cli": "^20.0.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
     "typescript": "~5.8.0"
   }
 }

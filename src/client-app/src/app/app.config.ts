@@ -27,6 +27,8 @@ import {
   msalInterceptorConfigFactory,
 } from './core/auth/auth.config';
 import { AuthService } from './core/auth/auth.service';
+import { TenantThemeService } from './core/services/tenant-theme.service';
+import { ReportHubService } from './core/services/report-hub.service';
 
 // Zoneless change detection is mandatory for the tenant portal (CLAUDE.md stack).
 //
@@ -53,9 +55,20 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(async () => {
       const msal = inject(MsalService);
       const auth = inject(AuthService);
+      const theme = inject(TenantThemeService);
+      const reportHub = inject(ReportHubService);
+
       await msal.instance.initialize();
       await msal.instance.handleRedirectPromise();
       auth.initialize();
+
+      // Apply the server-injected per-subdomain theme (--tenant-primary / --tenant-accent).
+      theme.apply();
+
+      // Connect the SignalR ReportHub (prompt 01). The hub joins the connection to the tenant's own
+      // group server-side. Connection failures are swallowed inside connect() so realtime being
+      // unavailable never blocks app render — the reports grid degrades to its httpResource read.
+      void reportHub.connect();
     }),
   ],
 };

@@ -23,30 +23,35 @@ interface SubscriptionStatus {
   selector: 'pulseone-subscription-status',
   standalone: true,
   template: `
-    <section class="subscription-status">
-      <h2 class="subscription-status__title">Your subscription</h2>
+    <section class="rounded-xl border border-slate-200 bg-white p-5" aria-live="polite">
+      <h2 class="text-lg font-semibold text-slate-900">Your subscription</h2>
 
       @if (status.isLoading()) {
-        <p>Loading…</p>
+        <p class="mt-2 text-sm text-slate-500" role="status">Loading…</p>
       } @else if (status.error()) {
-        <p class="subscription-status__error">Could not load subscription.</p>
+        <p class="mt-2 text-sm text-red-700" role="alert">Could not load subscription.</p>
       } @else if (status.value(); as s) {
-        <p class="subscription-status__tier">{{ s.tierName }}</p>
-        <p class="subscription-status__renewal">Renews on {{ s.renewalDate }}</p>
+        <p class="mt-2 text-xl font-semibold text-slate-900">{{ s.tierName }}</p>
+        <p class="text-sm text-slate-500">Renews on {{ s.renewalDate }}</p>
 
-        <div class="subscription-status__meters">
+        <div class="mt-4 space-y-3">
           @for (meter of s.meters; track meter.label) {
-            <div class="meter">
-              <span class="meter__label">{{ meter.label }}</span>
-              <progress class="meter__bar" [value]="meter.used" [max]="meter.limit"></progress>
-              <span class="meter__value">{{ meter.used }} / {{ meter.limit }}</span>
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-700">{{ meter.label }}</span>
+                <span class="text-slate-500">{{ meter.used }} / {{ meter.limit }}</span>
+              </div>
+              <progress
+                class="h-2 w-full overflow-hidden rounded"
+                [value]="meter.used"
+                [max]="meter.limit"
+              ></progress>
             </div>
           }
         </div>
       }
     </section>
   `,
-  styleUrl: './subscription-status.component.scss',
 })
 export class SubscriptionStatusComponent {
   private readonly billing = inject(RazorpayBillingService);

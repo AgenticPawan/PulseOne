@@ -13,21 +13,11 @@ import { SubscriptionStatusComponent } from './subscription-status.component';
   standalone: true,
   imports: [BillingPlansComponent, BillingHistoryComponent, SubscriptionStatusComponent],
   template: `
-    <div class="billing-page">
+    <div class="flex flex-col gap-8">
       <pulseone-subscription-status />
       <pulseone-billing-plans />
       <pulseone-billing-history />
     </div>
   `,
-  styles: [
-    `
-      .billing-page {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-        padding: 1.5rem;
-      }
-    `,
-  ],
 })
 export class BillingPageComponent {}
